@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option csharp_namespace = "AssistanceAPI.Protos";
+
+service AssistanceGrpc{
+	rpc GetReply(grpcRequest) returns (grpcResponse);
+}
+
+message grpcRequest{
+	string Message = 1;
+}
+
+message grpcResponse{
+	string Reply = 1;
+}
