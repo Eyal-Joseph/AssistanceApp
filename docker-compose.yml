@@ -26,7 +26,26 @@
     networks:
       - backend
    
-  GeminiAssistanceService:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    hostname: mongodb
+    volumes:
+      - ./mongodb/initdb.d/init-assistance-db.js:/docker-entrypoint-initdb.d/init-assistance-db.js:ro
+      - mongodb-data:/data/db/
+      - mongodb-log:/var/log/mongodb/
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: AssistanceDb
+    ports:
+      - "27017:27017"
+    networks:
+      - backend
+      
+  geminiassistanceservice:
     build:
       context: ./AssistanceService
       dockerfile: Dockerfile    
@@ -39,10 +58,12 @@
       - ASPNETCORE_ENVIRONMENT=Development
       - MODEL_TYPE=Gemini
       - GRPC_Port=6004
+      # Vector_Store = Mongo/Sql , default = InMemory
+      - Vector_Store=Sql
     networks:
       - backend
-
-  AzureAssistanceService:
+    
+  azureassistanceservice:
     build:
       context: ./AssistanceService
       dockerfile: Dockerfile    
@@ -55,12 +76,20 @@
       - ASPNETCORE_ENVIRONMENT=Development
       - MODEL_TYPE=Azure
       - GRPC_Port=6005
+      # Vector_Store = Mongo/Sql , default = InMemory
+      - Vector_Store=Mongo
     networks:
-      - backend
+      - backend 
  
 volumes:
   sqlserver-data:
     driver: local
+  mongodb-data:
+    driver: local
+    name: mongo-data
+  mongodb-log:
+    driver: local
+    name: mongo-log
 
 networks:
   backend:

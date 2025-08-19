@@ -276,3 +276,4 @@ cython_debug/
 
 #appsettings
 appsettings.Development.json
+/AssistanceInterface/src/package-lock.json

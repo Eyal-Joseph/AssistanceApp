@@ -10,6 +10,10 @@ namespace AssistanceHandler
 
     public class GoogleAssistanceHandler : AssistanceHandlerBase
     {
+        public GoogleAssistanceHandler(string vectorStoreType) : base(vectorStoreType)
+        {
+        }
+
         protected override void CreateBuilder()
         {
 
@@ -121,6 +125,7 @@ namespace AssistanceHandler
         //    }
         //    return fullResponse;
         //}
+        
     }
 #pragma warning restore SKEXP0070 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 

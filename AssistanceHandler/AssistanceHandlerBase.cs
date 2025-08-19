@@ -5,6 +5,7 @@ using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Embeddings;
+using MongoDB.Driver;
 
 namespace AssistanceHandler;
 
@@ -21,6 +22,10 @@ public abstract class AssistanceHandlerBase : IAssistanceHandler
         .AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true)
         .Build();
 
+    private readonly string _mongoConnectionString = "mongodb://root:password@mongodb:27017/?authSource=admin"; // Update if needed
+    private readonly string _mongoDbName = "AssistanceDb";
+    private readonly string _mongoCollectionName = "AssistanceCollection";
+
     protected List<string> fileList = new()
     {
         "SampleData/Elena-Adam-facts.txt",
@@ -31,9 +36,13 @@ public abstract class AssistanceHandlerBase : IAssistanceHandler
         "Server=sqlserver,1433;Database=VectorStore;User Id=sa;Password=StrongPassw0rd;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
 
     protected Kernel _kernel;
+    private readonly string _vectorStoreType;
 
-    public AssistanceHandlerBase()
+    public AssistanceHandlerBase(string vectorStoreType)
     {
+        Console.WriteLine($"VectorStoreType = {vectorStoreType}");
+
+        _vectorStoreType = vectorStoreType;
         CreateBuilder();
         AddPlugins();
         StartChat();
@@ -43,8 +52,29 @@ public abstract class AssistanceHandlerBase : IAssistanceHandler
     {
         Console.WriteLine($"CreateBuilder");
 
-        Builder.Services.AddInMemoryVectorStore();
-        Builder.Services.AddSqlServerVectorStore(connectionStringProvider: serviceProvider => sqlConnectionString);
+        if (_vectorStoreType.ToLower().Contains("mongo"))
+        {
+            Builder.Services.AddSingleton<IMongoDatabase>(sp =>
+            {
+                var mongoClient = new MongoClient(_mongoConnectionString);
+                return mongoClient.GetDatabase(_mongoDbName);
+            });
+            Builder.Services.AddMongoVectorStore();
+        }
+
+        else if (_vectorStoreType.ToLower().Contains("sql"))
+        {
+            Builder.Services.AddSqlServerVectorStore(connectionStringProvider: serviceProvider => sqlConnectionString);
+        }
+        else
+        {
+            Builder.Services.AddInMemoryVectorStore();
+        }
+
+
+
+
+
 
         _kernel = Builder.Build();
     }

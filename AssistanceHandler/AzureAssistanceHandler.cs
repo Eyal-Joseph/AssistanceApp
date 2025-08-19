@@ -1,10 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Microsoft.SemanticKernel.Connectors.Google;
 
 namespace AssistanceHandler;
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -13,6 +8,10 @@ namespace AssistanceHandler;
 
 public class AzureAssistanceHandler : AssistanceHandlerBase
 {
+    public AzureAssistanceHandler(string vectorStoreType) : base(vectorStoreType)
+    {
+    }
+
     protected override void CreateBuilder()
     {
 
