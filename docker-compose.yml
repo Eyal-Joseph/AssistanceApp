@@ -1,0 +1,96 @@
+﻿services:
+  sqlserver:
+    # public preview build with native VECTOR support
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: sqlserver
+    ports:
+      - '1433:1433'
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'StrongPassw0rd'
+      MSSQL_PID: 'Developer'
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+      - ./scripts/init-database.sql:/scripts/init-database.sql:ro
+    command: >
+      /bin/bash -c "
+        /opt/mssql/bin/sqlservr &  
+        echo '⏳ Waiting for SQL Server to start…';              
+        until /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassw0rd' -C -Q 'SELECT 1;' > /dev/null 2>&1; do
+          sleep 1;
+        done;
+        echo '✅ SQL Server is up — creating VectorStore DB if needed…';
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'StrongPassw0rd' -C -Q \"IF DB_ID('VectorStore') IS NULL CREATE DATABASE [VectorStore];\";
+        echo '🚀 Init complete, handing control back to sqlservr';
+        wait"
+    networks:
+      - backend
+   
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    hostname: mongodb
+    volumes:
+      - ./mongodb/initdb.d/init-assistance-db.js:/docker-entrypoint-initdb.d/init-assistance-db.js:ro
+      - mongodb-data:/data/db/
+      - mongodb-log:/var/log/mongodb/
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: AssistanceDb
+    ports:
+      - "27017:27017"
+    networks:
+      - backend
+      
+  geminiassistanceservice:
+    build:
+      context: ./AssistanceService
+      dockerfile: Dockerfile    
+    container_name: GeminiAssistanceService
+    ports:
+      - "6004:6004"
+    depends_on:
+      - sqlserver
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MODEL_TYPE=Gemini
+      - GRPC_Port=6004
+      # Vector_Store = Mongo/Sql , default = InMemory
+      - Vector_Store=Sql
+    networks:
+      - backend
+    
+  azureassistanceservice:
+    build:
+      context: ./AssistanceService
+      dockerfile: Dockerfile    
+    container_name: AzureAssistanceService
+    ports:
+      - "6005:6005"
+    depends_on:
+      - sqlserver
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MODEL_TYPE=Azure
+      - GRPC_Port=6005
+      # Vector_Store = Mongo/Sql , default = InMemory
+      - Vector_Store=Mongo
+    networks:
+      - backend 
+ 
+volumes:
+  sqlserver-data:
+    driver: local
+  mongodb-data:
+    driver: local
+    name: mongo-data
+  mongodb-log:
+    driver: local
+    name: mongo-log
+
+networks:
+  backend:
+    driver: bridge
